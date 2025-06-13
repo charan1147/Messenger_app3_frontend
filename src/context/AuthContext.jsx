@@ -12,24 +12,31 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await api.get("/users/me");
-        setUser(res.data.user); // ✅ Corrected
-        localStorage.setItem("user", JSON.stringify(res.data.user)); // ✅ Corrected
-      } catch {
+        const res = await api.get("/users/me"); // assumes backend at /api/users/me
+        setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+      } catch (err) {
         setUser(null);
         localStorage.removeItem("user");
       }
     }
 
-    if (!user) fetchUser();
-  }, [user]);
+    fetchUser(); // ✅ fetch only once
+  }, []);
 
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
+
     if (res.data?.user) {
       setUser(res.data.user);
       localStorage.setItem("user", JSON.stringify(res.data.user));
     }
+
+    // ✅ if you're using tokens instead of cookies:
+    if (res.data?.token) {
+      localStorage.setItem("token", res.data.token);
+    }
+
     return res.data;
   };
 
@@ -37,6 +44,7 @@ export const AuthProvider = ({ children }) => {
     await api.post("/auth/logout");
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token"); // ✅ if using token
   };
 
   return (
