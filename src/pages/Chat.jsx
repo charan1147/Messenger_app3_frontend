@@ -13,7 +13,7 @@ export default function Chat() {
   const { contactId } = useParams();
   const { user } = useContext(AuthContext);
   const { messages, setMessages } = useContext(ChatContext);
-  const { startCall, callAccepted, callEnded, localStream, remoteStream } =
+  const { callUser, callAccepted, callEnded, localStream, remoteStream } =
     useContext(CallContext);
   const [input, setInput] = useState("");
 
@@ -57,7 +57,7 @@ export default function Chat() {
   };
 
   const handleStartCall = (isVideo) => {
-    startCall({ to: contactId, isVideo, from: user._id });
+    callUser(contactId, isVideo); // ✅ Uses callUser from CallContext
   };
 
   if (!user) return <p>Loading...</p>;
@@ -82,12 +82,14 @@ export default function Chat() {
       </div>
 
       <div style={{ marginTop: 10 }}>
-        <button onClick={() => handleStartCall(false)}>Start Audio Call</button>
+        <button onClick={() => handleStartCall(false)}>
+          📞 Start Audio Call
+        </button>
         <button
           onClick={() => handleStartCall(true)}
           style={{ marginLeft: 10 }}
         >
-          Start Video Call
+          📹 Start Video Call
         </button>
       </div>
 
