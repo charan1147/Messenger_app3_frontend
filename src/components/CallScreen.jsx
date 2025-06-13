@@ -37,13 +37,14 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
     <div
       style={{
         marginTop: 20,
-        padding: 10,
-        border: "2px solid #444",
-        background: "#f5f5f5",
+        position: "relative",
+        width: "100%",
+        height: "80vh",
+        background: "#000",
       }}
     >
       {call && !callAccepted && (
-        <div>
+        <div style={{ padding: 20 }}>
           <p>
             Incoming {call.isVideo ? "Video" : "Audio"} call from{" "}
             <strong>{call.from}</strong>
@@ -53,40 +54,60 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
       )}
 
       {(callAccepted || localStream) && (
-        <div>
-          <h4>{call?.isVideo ? "Video Call" : "Audio Call"} in Progress</h4>
-          <div style={{ display: "flex", gap: 20 }}>
-            <video
-              ref={localRef}
-              autoPlay
-              muted
-              playsInline
-              style={{ width: 200, height: 150, border: "1px solid black" }}
-            />
-            {call?.isVideo && (
-              <video
-                ref={remoteRef}
-                autoPlay
-                playsInline
-                style={{ width: 200, height: 150, border: "1px solid black" }}
-              />
-            )}
-          </div>
+        <>
+          {/* Remote video = fullscreen */}
+          <video
+            ref={remoteRef}
+            autoPlay
+            playsInline
+            style={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              zIndex: 1,
+              backgroundColor: "black",
+            }}
+          />
+
+          {/* Local video = small corner */}
+          <video
+            ref={localRef}
+            autoPlay
+            muted
+            playsInline
+            style={{
+              position: "absolute",
+              bottom: 10,
+              right: 10,
+              width: 200,
+              height: 150,
+              border: "2px solid white",
+              zIndex: 2,
+              borderRadius: 8,
+              objectFit: "cover",
+              backgroundColor: "black",
+            }}
+          />
+
           <button
             onClick={() => endCall(remoteUserId)}
             style={{
-              marginTop: 10,
+              position: "absolute",
+              top: 10,
+              right: 10,
               padding: "5px 15px",
               background: "red",
               color: "white",
               border: "none",
               borderRadius: "5px",
               cursor: "pointer",
+              zIndex: 3,
             }}
           >
             End Call
           </button>
-        </div>
+        </>
       )}
     </div>
   );
