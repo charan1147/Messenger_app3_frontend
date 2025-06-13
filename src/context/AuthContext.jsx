@@ -9,42 +9,46 @@ export const AuthProvider = ({ children }) => {
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
+  // Fetch logged-in user on first load
   useEffect(() => {
-    async function fetchUser() {
+    const fetchUser = async () => {
       try {
-        const res = await api.get("/users/me"); // assumes backend at /api/users/me
-        setUser(res.data.user);
+        const res = await api.get("/users/me");
+        setUser(res.data.user); // assume response is { user: {...} }
         localStorage.setItem("user", JSON.stringify(res.data.user));
       } catch (err) {
         setUser(null);
         localStorage.removeItem("user");
+        localStorage.removeItem("token");
       }
+    };
+
+    // Fetch only if user or token not in localStorage
+    const token = localStorage.getItem("token");
+    if (!user && token) {
+      fetchUser();
     }
+  }, []); // ✅ empty array — runs only once
 
-    fetchUser(); // ✅ fetch only once
-  }, []);
-
+  // Login function
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
 
-    if (res.data?.user) {
+    if (res.data?.user && res.data?.token) {
       setUser(res.data.user);
       localStorage.setItem("user", JSON.stringify(res.data.user));
-    }
-
-    // ✅ if you're using tokens instead of cookies:
-    if (res.data?.token) {
-      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("token", res.data.token); // ✅ store token
     }
 
     return res.data;
   };
 
+  // Logout function
   const logout = async () => {
     await api.post("/auth/logout");
     setUser(null);
     localStorage.removeItem("user");
-    localStorage.removeItem("token"); // ✅ if using token
+    localStorage.removeItem("token");
   };
 
   return (
