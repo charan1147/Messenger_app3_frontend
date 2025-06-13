@@ -9,37 +9,51 @@ export const AuthProvider = ({ children }) => {
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
+  // 🧠 Set token in headers if found
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    }
+  }, []);
+
+  // ✅ Fetch user info using token
   useEffect(() => {
     async function fetchUser() {
       try {
         const res = await api.get("/users/me");
-        setUser(res.data);
-        localStorage.setItem("user", JSON.stringify(res.data)); // 🔥 sync on success
-      } catch {
+        setUser(res.data.user); // Fix: .user, not entire res.data
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+      } catch (err) {
+        console.error("Auto-login failed", err.response?.data?.message);
         setUser(null);
         localStorage.removeItem("user");
+        localStorage.removeItem("token");
       }
     }
 
-    // Only fetch if no user is in localStorage
-    if (!user) {
+    const token = localStorage.getItem("token");
+    if (!user && token) {
       fetchUser();
     }
   }, [user]);
 
   const login = async (email, password) => {
-    const res = await api.post("/auth/login", { email, password });
-    if (res.data?.user) {
+    const res = await api.post("/users/login", { email, password });
+    if (res.data?.user && res.data?.token) {
+      localStorage.setItem("token", res.data.token);
+      api.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
       setUser(res.data.user);
       localStorage.setItem("user", JSON.stringify(res.data.user));
     }
     return res.data;
   };
 
-  const logout = async () => {
-    await api.post("/auth/logout");
-    setUser(null);
+  const logout = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
+    setUser(null);
+    delete api.defaults.headers.common["Authorization"];
   };
 
   return (
