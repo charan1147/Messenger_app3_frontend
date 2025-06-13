@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from "react";
 import api from "../services/api";
 
@@ -11,38 +10,33 @@ export const AuthProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token && !user) {
-      fetchUser();
+    async function fetchUser() {
+      try {
+        const res = await api.get("/users/me");
+        setUser(res.data.user); // ✅ Corrected
+        localStorage.setItem("user", JSON.stringify(res.data.user)); // ✅ Corrected
+      } catch {
+        setUser(null);
+        localStorage.removeItem("user");
+      }
     }
-  }, []);
 
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-    } catch {
-      setUser(null);
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-    }
-  };
+    if (!user) fetchUser();
+  }, [user]);
 
   const login = async (email, password) => {
-    const res = await api.post("/users/login", { email, password });
-    if (res.data?.user && res.data?.token) {
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+    const res = await api.post("/auth/login", { email, password });
+    if (res.data?.user) {
       setUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
     }
     return res.data;
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const logout = async () => {
+    await api.post("/auth/logout");
     setUser(null);
+    localStorage.removeItem("user");
   };
 
   return (
