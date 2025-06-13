@@ -12,31 +12,33 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
     endCall,
   } = useContext(CallContext);
 
-  const localRef = useRef();
-  const remoteRef = useRef();
-  const [isMuted, setIsMuted] = useState(false);
+  const localRef = useRef(null);
+  const remoteRef = useRef(null);
   const ring = useRef(null);
+  const [isMuted, setIsMuted] = useState(false);
 
-  // Attach local stream to video
+  // Attach local stream
   useEffect(() => {
     if (localRef.current && localStream) {
       localRef.current.srcObject = localStream;
     }
   }, [localStream]);
 
-  // Attach remote stream to video
+  // Attach remote stream
   useEffect(() => {
     if (remoteRef.current && remoteStream) {
       remoteRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
-  // Handle ringing sound on incoming call
+  // Incoming call ringtone
   useEffect(() => {
     if (call && !callAccepted) {
       ring.current = new Audio("/ringtone.mp3");
       ring.current.loop = true;
-      ring.current.play().catch((err) => console.log("Autoplay blocked:", err));
+      ring.current
+        .play()
+        .catch((err) => console.log("Audio autoplay blocked:", err));
     }
     return () => {
       ring.current?.pause();
@@ -44,10 +46,8 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
   }, [call, callAccepted]);
 
   const handleAnswer = () => {
-    if (call) {
-      ring.current?.pause();
-      answerCall(call);
-    }
+    ring.current?.pause();
+    answerCall(call);
   };
 
   const handleReject = () => {
@@ -55,7 +55,7 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
     endCall(call?.from);
   };
 
-  const handleEnd = () => {
+  const handleEndCall = () => {
     endCall(remoteUserId);
   };
 
@@ -74,28 +74,17 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
     <div
       style={{
         marginTop: 20,
-        position: "relative",
         width: "100%",
         height: "80vh",
         background: "#000",
+        position: "relative",
       }}
     >
-      {/* Incoming call screen */}
+      {/* Incoming call popup */}
       {call && !callAccepted && (
-        <div
-          style={{
-            padding: 20,
-            color: "white",
-            zIndex: 10,
-            position: "absolute",
-            top: 20,
-            left: 20,
-            background: "rgba(0,0,0,0.7)",
-            borderRadius: 10,
-          }}
-        >
+        <div style={incomingCallBox}>
           <p>
-            📞 Incoming {call.isVideo ? "Video" : "Audio"} call from{" "}
+            📞 Incoming {call.isVideo ? "Video" : "Audio"} Call from{" "}
             <strong>{call.from}</strong>
           </p>
           <button onClick={handleAnswer} style={buttonStyle("green")}>
@@ -107,10 +96,9 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
         </div>
       )}
 
-      {/* Video display */}
+      {/* Streams display */}
       {(callAccepted || localStream) && (
         <>
-          {/* Remote stream */}
           <video
             ref={remoteRef}
             autoPlay
@@ -121,11 +109,8 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
               height: "100%",
               objectFit: "cover",
               zIndex: 1,
-              backgroundColor: "black",
             }}
           />
-
-          {/* Local stream preview */}
           <video
             ref={localRef}
             autoPlay
@@ -138,20 +123,18 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
               width: 200,
               height: 150,
               border: "2px solid white",
-              zIndex: 2,
               borderRadius: 8,
               objectFit: "cover",
-              backgroundColor: "black",
+              zIndex: 2,
             }}
           />
 
-          {/* Mute & End buttons */}
           <div style={{ position: "absolute", top: 10, right: 10, zIndex: 3 }}>
             <button onClick={toggleMute} style={buttonStyle("gray")}>
               {isMuted ? "Unmute" : "Mute"}
             </button>
             <button
-              onClick={handleEnd}
+              onClick={handleEndCall}
               style={{ ...buttonStyle("red"), marginLeft: 10 }}
             >
               End Call
@@ -163,10 +146,21 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
   );
 }
 
-// Reusable button styles
+const incomingCallBox = {
+  padding: 20,
+  background: "rgba(0, 0, 0, 0.7)",
+  color: "white",
+  borderRadius: 10,
+  position: "absolute",
+  top: 20,
+  left: 20,
+  zIndex: 10,
+};
+
 const buttonStyle = (color) => ({
   padding: "8px 16px",
   marginTop: 10,
+  marginRight: 8,
   backgroundColor: color,
   color: "white",
   border: "none",
