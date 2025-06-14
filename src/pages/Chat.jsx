@@ -10,24 +10,45 @@ import useWebSocket from "../hooks/useWebSocket";
 import CallScreen from "../components/CallScreen";
 
 export default function Chat() {
-  const { contactId } = useParams();
+  const { contactId } = useParams(); // URL param
   const { user } = useContext(AuthContext);
   const { messages, setMessages } = useContext(ChatContext);
   const { callUser } = useContext(CallContext);
-  const [input, setInput] = useState("");
 
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+
+  // ✅ Fetch messages and contact info
   useEffect(() => {
-    async function loadMessages() {
+    async function fetchData() {
       try {
-        const res = await api.get(`/messages/${contactId}`);
-        setMessages(res.data);
+        if (!contactId) return;
+
+        setLoading(true);
+        setError("");
+
+        // Fetch chat messages and contact email in parallel
+        const [msgRes, contactRes] = await Promise.all([
+          api.get(`/messages/${contactId}`),
+          api.get(`/contacts/${contactId}`),
+        ]);
+
+        setMessages(msgRes.data);
+        setContactEmail(contactRes.data?.email || contactId);
       } catch (err) {
-        console.error("Failed to fetch messages", err);
+        console.error("❌ Error fetching chat:", err);
+        setError("Failed to load chat.");
+      } finally {
+        setLoading(false);
       }
     }
-    if (contactId) loadMessages();
+
+    fetchData();
   }, [contactId, setMessages]);
 
+  // ✅ Handle receiving a new message in real-time
   const handleReceive = useCallback(
     (msg) => {
       if (
@@ -40,49 +61,65 @@ export default function Chat() {
     [contactId, user, setMessages]
   );
 
+  // ✅ Listen for messages via WebSocket
   useWebSocket(handleReceive);
 
+  // ✅ Send a message
   const sendMessage = async () => {
     if (!input.trim()) return;
     try {
-      const payload = { receiverId: contactId, content: input };
+      const payload = {
+        receiverId: contactId,
+        content: input,
+      };
+
       const res = await api.post("/messages", payload);
       setMessages((prev) => [...prev, res.data]);
       socket.emit("sendMessage", res.data);
       setInput("");
     } catch (err) {
-      console.error("Failed to send message", err);
+      console.error("❌ Error sending message:", err);
+      setError("Failed to send message.");
     }
   };
 
-  // ✅ Create unique room for both users (sorted to ensure both sides generate same ID)
+  // ✅ Start video call
   const handleStartCall = () => {
     const roomId = [user._id, contactId].sort().join("_");
-    callUser(roomId); // Only one button for video call
+    callUser(roomId);
   };
 
-  if (!user || !user._id || !contactId) return <p>Loading...</p>;
+  // ✅ Render loading or error
+  if (!user || !user._id || !contactId || loading) {
+    return <p>Loading chat...</p>;
+  }
+
+  if (error) {
+    return <p style={{ color: "red" }}>{error}</p>;
+  }
 
   return (
-    <div>
-      <h2>Chat with {contactId}</h2>
+    <div style={{ padding: 20 }}>
+      <h2>
+        Chat with <span style={{ color: "blue" }}>{contactEmail}</span>
+      </h2>
 
       <ChatBox messages={messages} currentUserId={user._id} />
 
       <div style={{ display: "flex", marginTop: 10 }}>
         <input
-          style={{ flex: 1 }}
           type="text"
+          style={{ flex: 1, padding: "6px" }}
           placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        <button onClick={sendMessage} style={{ marginLeft: 5 }}>
+        <button onClick={sendMessage} style={{ marginLeft: 8 }}>
           Send
         </button>
       </div>
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 12 }}>
         <button onClick={handleStartCall}>📹 Start Video Call</button>
       </div>
 
