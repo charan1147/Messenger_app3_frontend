@@ -1,4 +1,3 @@
-// src/context/CallContext.jsx
 import React, {
   createContext,
   useContext,
@@ -16,14 +15,12 @@ export const CallProvider = ({ children, currentUser }) => {
   const [call, setCall] = useState(null);
   const [callAccepted, setCallAccepted] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
-
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
 
   const peerRef = useRef();
   const currentCallRoom = useRef(null);
 
-  // Incoming call listener
   useEffect(() => {
     socket.on("call:user", ({ from, signal, isVideo }) => {
       setCall({ from, signal, isVideo });
@@ -104,7 +101,13 @@ export const CallProvider = ({ children, currentUser }) => {
     setCallAccepted(true);
   };
 
-  const endCall = (otherUserId) => {
+  const toggleVideo = () => {
+    if (!localStream) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
+  };
+
+  const endCall = () => {
     if (currentCallRoom.current) {
       socket.emit("endCall", { roomId: currentCallRoom.current });
     }
@@ -135,6 +138,7 @@ export const CallProvider = ({ children, currentUser }) => {
         callUser,
         answerCall,
         endCall,
+        toggleVideo,
       }}
     >
       {children}

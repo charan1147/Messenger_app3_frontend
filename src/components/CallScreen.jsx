@@ -15,30 +15,30 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
   const localRef = useRef(null);
   const remoteRef = useRef(null);
   const ring = useRef(null);
-  const [isMuted, setIsMuted] = useState(false);
 
-  // Attach local stream
+  const [isMuted, setIsMuted] = useState(false);
+  const [videoOff, setVideoOff] = useState(false);
+
+  // Attach local video stream
   useEffect(() => {
     if (localRef.current && localStream) {
       localRef.current.srcObject = localStream;
     }
   }, [localStream]);
 
-  // Attach remote stream
+  // Attach remote video stream
   useEffect(() => {
     if (remoteRef.current && remoteStream) {
       remoteRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
-  // Incoming call ringtone
+  // Play ringtone if incoming call
   useEffect(() => {
     if (call && !callAccepted) {
       ring.current = new Audio("/ringtone.mp3");
       ring.current.loop = true;
-      ring.current
-        .play()
-        .catch((err) => console.log("Audio autoplay blocked:", err));
+      ring.current.play().catch((err) => console.log("Autoplay blocked", err));
     }
     return () => {
       ring.current?.pause();
@@ -68,19 +68,21 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
     }
   };
 
+  const toggleVideo = () => {
+    if (!localStream) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      setVideoOff(!videoTrack.enabled);
+    }
+  };
+
+  // If no call is active
   if (!call && !callAccepted && !localStream) return null;
 
   return (
-    <div
-      style={{
-        marginTop: 20,
-        width: "100%",
-        height: "80vh",
-        background: "#000",
-        position: "relative",
-      }}
-    >
-      {/* Incoming call popup */}
+    <div style={wrapperStyle}>
+      {/* Incoming Call Popup */}
       {call && !callAccepted && (
         <div style={incomingCallBox}>
           <p>
@@ -96,21 +98,21 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
         </div>
       )}
 
-      {/* Streams display */}
+      {/* Call Stream Display */}
       {(callAccepted || localStream) && (
         <>
+          {/* Remote Video */}
           <video
             ref={remoteRef}
             autoPlay
             playsInline
             style={{
-              position: "absolute",
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
+              ...videoStyle,
               zIndex: 1,
+              backgroundColor: "#000",
             }}
           />
+          {/* Local Video (small corner box) */}
           <video
             ref={localRef}
             autoPlay
@@ -128,14 +130,20 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
               zIndex: 2,
             }}
           />
-
+          {/* Controls */}
           <div style={{ position: "absolute", top: 10, right: 10, zIndex: 3 }}>
             <button onClick={toggleMute} style={buttonStyle("gray")}>
               {isMuted ? "Unmute" : "Mute"}
             </button>
             <button
+              onClick={toggleVideo}
+              style={{ ...buttonStyle("gray"), marginLeft: 8 }}
+            >
+              {videoOff ? "Start Video" : "Stop Video"}
+            </button>
+            <button
               onClick={handleEndCall}
-              style={{ ...buttonStyle("red"), marginLeft: 10 }}
+              style={{ ...buttonStyle("red"), marginLeft: 8 }}
             >
               End Call
             </button>
@@ -145,6 +153,21 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
     </div>
   );
 }
+
+const wrapperStyle = {
+  marginTop: 20,
+  width: "100%",
+  height: "80vh",
+  background: "#000",
+  position: "relative",
+};
+
+const videoStyle = {
+  position: "absolute",
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+};
 
 const incomingCallBox = {
   padding: 20,
@@ -160,7 +183,6 @@ const incomingCallBox = {
 const buttonStyle = (color) => ({
   padding: "8px 16px",
   marginTop: 10,
-  marginRight: 8,
   backgroundColor: color,
   color: "white",
   border: "none",

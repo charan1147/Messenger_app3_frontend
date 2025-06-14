@@ -13,8 +13,7 @@ export default function Chat() {
   const { contactId } = useParams();
   const { user } = useContext(AuthContext);
   const { messages, setMessages } = useContext(ChatContext);
-  const { callUser, callAccepted, callEnded, localStream, remoteStream } =
-    useContext(CallContext);
+  const { callUser } = useContext(CallContext);
   const [input, setInput] = useState("");
 
   useEffect(() => {
@@ -56,11 +55,13 @@ export default function Chat() {
     }
   };
 
-  const handleStartCall = (isVideo) => {
-    callUser(contactId, isVideo); // ✅ Uses callUser from CallContext
+  // ✅ Create unique room for both users (sorted to ensure both sides generate same ID)
+  const handleStartCall = () => {
+    const roomId = [user._id, contactId].sort().join("_");
+    callUser(roomId); // Only one button for video call
   };
 
-  if (!user) return <p>Loading...</p>;
+  if (!user || !user._id || !contactId) return <p>Loading...</p>;
 
   return (
     <div>
@@ -82,15 +83,7 @@ export default function Chat() {
       </div>
 
       <div style={{ marginTop: 10 }}>
-        <button onClick={() => handleStartCall(false)}>
-          📞 Start Audio Call
-        </button>
-        <button
-          onClick={() => handleStartCall(true)}
-          style={{ marginLeft: 10 }}
-        >
-          📹 Start Video Call
-        </button>
+        <button onClick={handleStartCall}>📹 Start Video Call</button>
       </div>
 
       <CallScreen currentUserId={user._id} remoteUserId={contactId} />
