@@ -10,7 +10,7 @@ import useWebSocket from "../hooks/useWebSocket";
 import CallScreen from "../components/CallScreen";
 
 export default function Chat() {
-  const { contactId } = useParams(); // URL param
+  const { contactId } = useParams(); // From URL
   const { user } = useContext(AuthContext);
   const { messages, setMessages } = useContext(ChatContext);
   const { callUser } = useContext(CallContext);
@@ -20,27 +20,30 @@ export default function Chat() {
   const [error, setError] = useState("");
   const [contactEmail, setContactEmail] = useState("");
 
-  // ✅ Fetch messages and contact info
+  // ✅ Log user and contact info
+  console.log("🧑 Authenticated user:", user);
+  console.log("📨 Contact ID from URL:", contactId);
+
+  // ✅ Fetch messages from backend
   useEffect(() => {
     async function fetchData() {
       try {
         if (!contactId) return;
 
+        console.log("🔄 Fetching messages for:", contactId);
         setLoading(true);
         setError("");
 
-        // Fetch chat messages and contact email in parallel
-        const [msgRes, contactRes] = await Promise.all([
-          api.get(`/messages/${contactId}`),
-          api.get(`/contacts/${contactId}`),
-        ]);
+        const msgRes = await api.get(`/messages/${contactId}`);
+        console.log("✅ Messages fetched:", msgRes.data);
 
         setMessages(msgRes.data);
-        setContactEmail(contactRes.data?.email || contactId);
+        setContactEmail(contactId); // You can enhance this later with contact details
       } catch (err) {
         console.error("❌ Error fetching chat:", err);
         setError("Failed to load chat.");
       } finally {
+        console.log("🟢 Finished loading messages");
         setLoading(false);
       }
     }
@@ -48,7 +51,7 @@ export default function Chat() {
     fetchData();
   }, [contactId, setMessages]);
 
-  // ✅ Handle receiving a new message in real-time
+  // ✅ Receive message in real time via WebSocket
   const handleReceive = useCallback(
     (msg) => {
       if (
@@ -61,7 +64,7 @@ export default function Chat() {
     [contactId, user, setMessages]
   );
 
-  // ✅ Listen for messages via WebSocket
+  // ✅ Custom hook to handle WebSocket setup
   useWebSocket(handleReceive);
 
   // ✅ Send a message
@@ -89,8 +92,12 @@ export default function Chat() {
     callUser(roomId);
   };
 
-  // ✅ Render loading or error
-  if (!user || !user._id || !contactId || loading) {
+  // ✅ Early exits for invalid cases
+  if (!user || !user._id || !contactId) {
+    return <p style={{ color: "red" }}>⚠️ Invalid user or contact.</p>;
+  }
+
+  if (loading) {
     return <p>Loading chat...</p>;
   }
 

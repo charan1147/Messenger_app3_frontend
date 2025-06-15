@@ -11,12 +11,14 @@ export default defineConfig({
     alias: {
       stream: 'stream-browserify',
       crypto: 'crypto-browserify',
+      events: 'events/',
+      util: 'util/',
     },
   },
   optimizeDeps: {
     esbuildOptions: {
       define: {
-        global: 'globalThis', // ✅ Fixes 'global is not defined'
+        global: 'globalThis',
       },
       plugins: [
         NodeGlobalsPolyfillPlugin({
@@ -29,7 +31,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       plugins: [
-        rollupNodePolyFill(), // ✅ Polyfills node core modules
+        rollupNodePolyFill(),
       ],
     },
   },
