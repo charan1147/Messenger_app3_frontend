@@ -19,31 +19,31 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
   const [isMuted, setIsMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
 
-  // Attach local video stream
+  // Attach local stream
   useEffect(() => {
     if (localRef.current && localStream) {
       localRef.current.srcObject = localStream;
     }
   }, [localStream]);
 
-  // Attach remote video stream
+  // Attach remote stream
   useEffect(() => {
     if (remoteRef.current && remoteStream) {
       remoteRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
-  // Play ringtone if incoming call
+  // Ringtone on incoming call
   useEffect(() => {
-    if (call && !callAccepted) {
+    if (call && call.from !== currentUserId && !callAccepted) {
       ring.current = new Audio("/ringtone.mp3");
       ring.current.loop = true;
-      ring.current.play().catch((err) => console.log("Autoplay blocked", err));
+      ring.current.play().catch((err) => console.log("Autoplay blocked:", err));
     }
     return () => {
       ring.current?.pause();
     };
-  }, [call, callAccepted]);
+  }, [call, callAccepted, currentUserId]);
 
   const handleAnswer = () => {
     ring.current?.pause();
@@ -77,17 +77,17 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
     }
   };
 
-  // If no call is active
+  // No call active
   if (!call && !callAccepted && !localStream) return null;
 
   return (
     <div style={wrapperStyle}>
-      {/* Incoming Call Popup */}
-      {call && !callAccepted && (
+      {/* Incoming Call */}
+      {call && call.from !== currentUserId && !callAccepted && (
         <div style={incomingCallBox}>
           <p>
             📞 Incoming {call.isVideo ? "Video" : "Audio"} Call from{" "}
-            <strong>{call.from}</strong>
+            <strong>{call.fromName || call.from}</strong>
           </p>
           <button onClick={handleAnswer} style={buttonStyle("green")}>
             Answer
@@ -98,21 +98,22 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
         </div>
       )}
 
-      {/* Call Stream Display */}
+      {/* Calling Screen */}
+      {call && call.from === currentUserId && !callAccepted && (
+        <div style={incomingCallBox}>
+          <p>
+            ⏳ Calling <strong>{call.toName || remoteUserId}</strong>...
+          </p>
+          <button onClick={handleEndCall} style={buttonStyle("red")}>
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Active Call UI */}
       {(callAccepted || localStream) && (
         <>
-          {/* Remote Video */}
-          <video
-            ref={remoteRef}
-            autoPlay
-            playsInline
-            style={{
-              ...videoStyle,
-              zIndex: 1,
-              backgroundColor: "#000",
-            }}
-          />
-          {/* Local Video (small corner box) */}
+          <video ref={remoteRef} autoPlay playsInline style={videoStyle} />
           <video
             ref={localRef}
             autoPlay
@@ -130,6 +131,7 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
               zIndex: 2,
             }}
           />
+
           {/* Controls */}
           <div style={{ position: "absolute", top: 10, right: 10, zIndex: 3 }}>
             <button onClick={toggleMute} style={buttonStyle("gray")}>
@@ -154,6 +156,7 @@ export default function CallScreen({ currentUserId, remoteUserId }) {
   );
 }
 
+// Styles
 const wrapperStyle = {
   marginTop: 20,
   width: "100%",
@@ -167,17 +170,19 @@ const videoStyle = {
   width: "100%",
   height: "100%",
   objectFit: "cover",
+  zIndex: 1,
 };
 
 const incomingCallBox = {
   padding: 20,
-  background: "rgba(0, 0, 0, 0.7)",
+  background: "rgba(0, 0, 0, 0.8)",
   color: "white",
   borderRadius: 10,
   position: "absolute",
-  top: 20,
-  left: 20,
+  top: 30,
+  left: 30,
   zIndex: 10,
+  maxWidth: "80%",
 };
 
 const buttonStyle = (color) => ({

@@ -9,16 +9,17 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      // ✅ Fix trailing slashes for compatibility
       stream: 'stream-browserify',
       crypto: 'crypto-browserify',
-      events: 'events/',
-      util: 'util/',
+      events: 'events',
+      util: 'util',
     },
   },
   optimizeDeps: {
     esbuildOptions: {
       define: {
-        global: 'globalThis',
+        global: 'globalThis', // ✅ Ensure compatibility with polyfills
       },
       plugins: [
         NodeGlobalsPolyfillPlugin({
@@ -31,7 +32,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       plugins: [
-        rollupNodePolyFill(),
+        rollupNodePolyFill(), // ✅ Polyfill Node core modules for production
       ],
     },
   },

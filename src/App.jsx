@@ -1,17 +1,19 @@
 import React, { useContext } from "react";
-
 import {
   BrowserRouter as Router,
   Route,
   Routes,
   Navigate,
 } from "react-router-dom";
-import { CallProvider } from "./context/CallContext";
-import { AuthProvider,AuthContext } from "./context/AuthContext";
+
+// 🧠 Contexts
+import { AuthProvider, AuthContext } from "./context/AuthContext";
 import { ChatProvider } from "./context/ChatContext";
 import { ContactProvider } from "./context/ContactContext";
+import { CallProvider } from "./context/CallContext";
 
-import Navbar from "./components/Navbar"
+// 📦 Components & Pages
+import Navbar from "./components/Navbar";
 import Login from "./components/Auth/Login";
 import Register from "./components/Auth/Register";
 import Home from "./pages/Home";
@@ -19,13 +21,13 @@ import Contacts from "./pages/Contacts";
 import Chat from "./pages/Chat";
 import AddContact from "./components/AddContact";
 
-// 🔒 PrivateRoute (only for logged-in users)
+// 🔐 PrivateRoute - accessible only if authenticated
 function PrivateRoute({ children }) {
   const { user } = useContext(AuthContext);
   return user ? children : <Navigate to="/login" />;
 }
 
-// 🌐 PublicRoute (only for guests)
+// 🌐 PublicRoute - accessible only if NOT authenticated
 function PublicRoute({ children }) {
   const { user } = useContext(AuthContext);
   return !user ? children : <Navigate to="/" />;
@@ -39,7 +41,9 @@ export default function App() {
           <CallProvider>
             <Router>
               <Navbar />
+
               <Routes>
+                {/* Public Routes */}
                 <Route
                   path="/login"
                   element={
@@ -56,6 +60,8 @@ export default function App() {
                     </PublicRoute>
                   }
                 />
+
+                {/* Private Routes */}
                 <Route
                   path="/"
                   element={
@@ -68,10 +74,10 @@ export default function App() {
                   path="/contacts"
                   element={
                     <PrivateRoute>
-                      <>
+                      <div>
                         <Contacts />
                         <AddContact />
-                      </>
+                      </div>
                     </PrivateRoute>
                   }
                 />

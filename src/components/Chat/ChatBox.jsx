@@ -20,54 +20,54 @@ export default function ChatBox({
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const scrollRef = useRef(null);
 
+  // Set local stream
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
     }
   }, [localStream]);
 
+  // Set remote stream
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
-  const formatDate = (isoString) =>
-    new Date(isoString).toLocaleDateString(undefined, {
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const formatDate = (iso) =>
+    new Date(iso).toLocaleDateString(undefined, {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
     });
 
-  const formatTime = (isoString) =>
-    new Date(isoString).toLocaleTimeString(undefined, {
+  const formatTime = (iso) =>
+    new Date(iso).toLocaleTimeString(undefined, {
       hour: "2-digit",
       minute: "2-digit",
     });
 
   const groupedMessages = messages.reduce((acc, msg) => {
     const dateKey = formatDate(msg.createdAt || msg.timestamp);
-    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey] = acc[dateKey] || [];
     acc[dateKey].push(msg);
     return acc;
   }, {});
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: "10px" }}>
-      <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+    <div style={styles.wrapper}>
+      {/* Message List */}
+      <div style={styles.messageContainer}>
         {Object.entries(groupedMessages).map(([date, msgs]) => (
           <div key={date}>
-            <div
-              style={{
-                textAlign: "center",
-                margin: "10px 0",
-                fontWeight: "bold",
-                color: "#555",
-              }}
-            >
-              {date}
-            </div>
+            <div style={styles.dateLabel}>{date}</div>
             {msgs.map((msg) => {
               const isCurrentUser =
                 msg.sender?._id === currentUserId ||
@@ -86,33 +86,14 @@ export default function ChatBox({
                 >
                   <div
                     style={{
-                      display: "inline-block",
+                      ...styles.messageBubble,
                       backgroundColor: isCurrentUser ? "#dcf8c6" : "#f1f0f0",
-                      padding: "6px 12px",
-                      borderRadius: "10px",
-                      position: "relative",
-                      maxWidth: "80%",
+                      alignSelf: isCurrentUser ? "flex-end" : "flex-start",
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        fontWeight: "bold",
-                        color: "#333",
-                        marginBottom: "2px",
-                      }}
-                    >
-                      {senderLabel}
-                    </div>
+                    <div style={styles.senderLabel}>{senderLabel}</div>
                     <div>{msg.content}</div>
-                    <div
-                      style={{
-                        fontSize: "0.7rem",
-                        marginTop: "2px",
-                        color: "#666",
-                        textAlign: "right",
-                      }}
-                    >
+                    <div style={styles.timeLabel}>
                       {formatTime(msg.createdAt || msg.timestamp)}
                     </div>
                   </div>
@@ -121,25 +102,28 @@ export default function ChatBox({
             })}
           </div>
         ))}
+        <div ref={scrollRef} />
       </div>
 
+      {/* Audio/Video Call Preview */}
       {(isAudioCallActive || isVideoCallActive) && (
-        <div style={{ marginTop: 10 }}>
-          <p>{isVideoCallActive ? "Video" : "Audio"} Call in Progress</p>
+        <div style={styles.callPreview}>
+          <p>{isVideoCallActive ? "🎥 Video" : "🔊 Audio"} Call in Progress</p>
+
           {isVideoCallActive && (
-            <div style={{ display: "flex", gap: "10px" }}>
+            <div style={styles.videoContainer}>
               <video
                 ref={localVideoRef}
                 autoPlay
                 muted
                 playsInline
-                style={{ width: "200px", border: "1px solid black" }}
+                style={styles.video}
               />
               <video
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                style={{ width: "200px", border: "1px solid black" }}
+                style={styles.video}
               />
             </div>
           )}
@@ -148,3 +132,63 @@ export default function ChatBox({
     </div>
   );
 }
+
+const styles = {
+  wrapper: {
+    border: "1px solid #ccc",
+    padding: "10px",
+    borderRadius: 6,
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    backgroundColor: "#fff",
+  },
+  messageContainer: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "5px",
+    maxHeight: "60vh",
+  },
+  dateLabel: {
+    textAlign: "center",
+    margin: "10px 0 4px",
+    fontWeight: "bold",
+    color: "#555",
+  },
+  messageBubble: {
+    display: "inline-block",
+    padding: "6px 12px",
+    borderRadius: "10px",
+    maxWidth: "75%",
+    position: "relative",
+  },
+  senderLabel: {
+    fontSize: "0.75rem",
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: "3px",
+  },
+  timeLabel: {
+    fontSize: "0.7rem",
+    marginTop: "4px",
+    color: "#666",
+    textAlign: "right",
+  },
+  callPreview: {
+    marginTop: 12,
+    paddingTop: 8,
+    borderTop: "1px solid #eee",
+  },
+  videoContainer: {
+    display: "flex",
+    gap: "10px",
+    marginTop: 8,
+  },
+  video: {
+    width: "200px",
+    height: "150px",
+    border: "1px solid #000",
+    borderRadius: 6,
+    objectFit: "cover",
+  },
+};
