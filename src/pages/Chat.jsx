@@ -18,38 +18,42 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
+  const [contact, setContact] = useState(null); // 🆕 store contact details
 
-  // ✅ Fetch messages
+  // ✅ Fetch messages and contact info
   useEffect(() => {
     async function fetchData() {
-      if (!contactId) return;
+      if (!contactId || !user?._id) return;
 
+      setLoading(true);
+      setError("");
       try {
-        setLoading(true);
-        setError("");
-        const msgRes = await api.get(`/messages/${contactId}`);
+        const [msgRes, contactRes] = await Promise.all([
+          api.get(`/messages/${contactId}`),
+          api.get(`/users/${contactId}`),
+        ]);
+
         setMessages(msgRes.data);
-        setContactEmail(contactId); // Update this to display name if available
+        setContact(contactRes.data.user);
       } catch (err) {
         console.error("❌ Fetch error:", err);
-        setError("Failed to load chat.");
+        setError("Failed to load chat or contact info.");
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-  }, [contactId, setMessages]);
+  }, [contactId, user?._id, setMessages]);
 
-  // ✅ WebSocket receive handler
+  // ✅ WebSocket message receive handler
   const handleReceive = useCallback(
     (msg) => {
-      const isFromOrToContact =
+      const isRelevant =
         (msg.sender === contactId && msg.receiver === user._id) ||
         (msg.sender === user._id && msg.receiver === contactId);
 
-      if (isFromOrToContact) {
+      if (isRelevant) {
         setMessages((prev) => [...prev, msg]);
       }
     },
@@ -74,7 +78,7 @@ export default function Chat() {
     }
   };
 
-  // ✅ Support Enter key
+  // ✅ Enter key support
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -83,22 +87,24 @@ export default function Chat() {
   };
 
   const handleStartCall = () => {
-    const roomId = [user._id, contactId].sort().join("_");
-    callUser(contactId, true); // Ensure remote ID is passed to `callUser`
+    callUser(contactId, true); // true = video
   };
 
-  // ✅ Guard for invalid users
+  // ✅ UI guards
   if (!user || !user._id || !contactId) {
     return <p style={{ color: "red" }}>⚠️ Invalid user or contact ID.</p>;
   }
 
-  if (loading) return <p>Loading chat...</p>;
+  if (loading) return <p>🔄 Loading chat...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
       <h2>
-        Chat with <span style={{ color: "blue" }}>{contactEmail}</span>
+        Chat with{" "}
+        <span style={{ color: "blue" }}>
+          {contact?.name || contact?.email || "Unknown User"}
+        </span>
       </h2>
 
       <ChatBox messages={messages} currentUserId={user._id} />
